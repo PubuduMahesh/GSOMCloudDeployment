@@ -1,0 +1,58 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.eggs/
+dist/
+build/
+sdist/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this.txt
+
+# Unit test / coverage reports
+*.coverage
+*.lcov
+.tox/
+.pytest_cache/
+nosetests.xml
+
+# Environment files
+.env
+.venv
+env/
+venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# OS or editor-specific files
+.DS_Store
+.vscode/
+*.swp
+*.swo
+*.idea/
+*.tmproj
+*.sublime*
+*.bak
+*.tmp
+*.log
+
+# Output files (customize for your project)
+output/
+gsom.csv
+gsom.pdf
+gsom.png
+
+# Docker files and cache (If you dont want docker builds on git)
+Dockerfile
+.dockerignore
