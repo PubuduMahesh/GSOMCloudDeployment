@@ -4,6 +4,8 @@ from scipy.spatial import distance
 import scipy
 from tqdm import tqdm
 import math
+import matplotlib.pyplot as plt
+import os
 
 data_filename = "example/data/zoo.txt".replace('\\', '/')
 
@@ -84,6 +86,35 @@ class GSOM:
     def _get_neighbourhood_radius(self, total_iteration, iteration):
         time_constant = total_iteration / math.log(self.max_radius)
         return self.max_radius * math.exp(- iteration / time_constant)
+        
+    def plot(self, map_points, index_col, gsom_map=None, output_dir="."):
+        """
+        Generate and save the plot of the GSOM map.
+        
+        :param map_points: Data points mapped to the GSOM map.
+        :param index_col: Column used for labeling the data points.
+        :param gsom_map: Optional parameter for additional map information.
+        :param output_dir: Directory to save the plot.
+        """
+        plt.figure(figsize=(10, 10))
+        plt.scatter(
+            map_points["x"], map_points["y"], s=map_points["hit_count"] * 10, alpha=0.6
+        )
+
+        # Annotate the plot with data labels
+        for _, row in map_points.iterrows():
+            plt.text(row["x"], row["y"], str(row[index_col]), fontsize=8, ha='center', va='center')
+
+        plt.title("GSOM Visualization")
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Y Coordinate")
+
+        # Ensure the output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, "gsom_plot.pdf")
+        plt.savefig(output_file)
+        print(f"Plot saved to {output_file}")
+        plt.close()
 
     def _new_weights_for_new_node_in_middle(self, winnerx, winnery, next_nodex, next_nodey):
         weights = (self.node_list[self.map[(winnerx, winnery)]] + self.node_list[
