@@ -5,23 +5,22 @@ phases:
     commands:
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 448049833640.dkr.ecr.eu-north-1.amazonaws.com
+
   build:
     commands:
       - echo Building Docker image...
       - docker build -t gsom-image .
       - docker tag gsom-image:latest 448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest
+
   post_build:
     commands:
       - echo Pushing Docker image to Amazon ECR...
       - docker push 448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest
+      - echo Updating SageMaker Model...
+      - aws sagemaker create-model --model-name gsom-cloud-model --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest --execution-role-arn arn:aws:iam::448049833640:role/service-role/AmazonSageMaker-ExecutionRole --region eu-north-1
       - echo Updating SageMaker Endpoint...
-      - aws sagemaker create-model \
-          --model-name gsom-cloud-model \
-          --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest \
-          --execution-role-arn arn:aws:iam::448049833640:role/service-role/AmazonSageMaker-ExecutionRole
-      - aws sagemaker update-endpoint \
-          --endpoint-name gsom-endpoint \
-          --endpoint-config-name gsom-endpoint-config
+      - aws sagemaker update-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1
+
 artifacts:
   files:
     - '**/*'
