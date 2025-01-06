@@ -1,18 +1,22 @@
 # Base image for Python
 FROM python:3.9-slim
 
-# Set working directory inside the container
+# Set environment variables
+ENV PORT=8080
+ENV PYTHONUNBUFFERED=TRUE
+
+# Set working directory
 WORKDIR /app
 
-# Copy requirements file and install dependencies
+# Copy requirements.txt and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set PYTHONPATH so Python can locate the 'gsom' module
-ENV PYTHONPATH=/app
-
-# Copy the rest of the application code into the container
+# Copy the application code into the container
 COPY . .
 
-# Set the default command to run the script
-CMD ["python", "example/zoo_gsom.py"]
+# Expose port 8080 for SageMaker
+EXPOSE 8080
+
+# Command to run the Flask server
+CMD ["python", "gsom/serve.py"]
