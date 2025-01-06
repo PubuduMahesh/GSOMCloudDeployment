@@ -16,6 +16,7 @@ phases:
     commands:
       - echo Pushing Docker image to Amazon ECR...
       - docker push 448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest
+
       - echo Checking if SageMaker model exists...
       - if aws sagemaker describe-model --model-name gsom-cloud-model --region eu-north-1; then
             echo "Model gsom-cloud-model already exists. Skipping model creation.";
@@ -23,8 +24,31 @@ phases:
             echo "Creating SageMaker Model...";
             aws sagemaker create-model --model-name gsom-cloud-model --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest --execution-role-arn arn:aws:iam::448049833640:role/service-role/AmazonSageMaker-ExecutionRole --region eu-north-1;
         fi
-      - echo Updating SageMaker Endpoint...
-      - aws sagemaker update-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1
+
+      - echo Checking if SageMaker endpoint configuration exists...
+      - if aws sagemaker describe-endpoint-config --endpoint-config-name gsom-endpoint-config --region eu-north-1; then
+            echo "Endpoint configuration gsom-endpoint-config already exists. Skipping configuration creation.";
+        else
+            echo "Creating SageMaker Endpoint Configuration...";
+            aws sagemaker create-endpoint-config --endpoint-config-name gsom-endpoint-config --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" --region eu-north-1;
+        fi
+
+      - echo Checking if SageMaker endpoint exists...
+      - if aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1; then
+            ENDPOINT_STATUS=$(aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1 --query 'EndpointStatus' --output text);
+            if [ "$ENDPOINT_STATUS" = "Failed" ]; then
+                echo "Deleting failed endpoint...";
+                aws sagemaker delete-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1;
+                echo "Recreating endpoint...";
+                aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1;
+            else
+                echo "Updating SageMaker Endpoint...";
+                aws sagemaker update-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1;
+            fi
+        else
+            echo "Creating SageMaker Endpoint...";
+            aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1;
+        fi
 
 artifacts:
   files:
