@@ -54,5 +54,5 @@ gsom.pdf
 gsom.png
 
 # Docker files and cache (If you dont want docker builds on git)
-Dockerfile
+#Dockerfile
 .dockerignore
