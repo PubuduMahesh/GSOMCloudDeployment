@@ -30,23 +30,15 @@ phases:
       - UNIQUE_CONFIG_NAME="gsom-endpoint-config-$(date +%s)"
       - aws sagemaker create-endpoint-config --endpoint-config-name $UNIQUE_CONFIG_NAME --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" --region eu-north-1
 
-      - echo Checking if SageMaker endpoint exists...
+      - echo Checking if SageMaker endpoint exists and deleting it if present...
       - |
         if aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1; then
-            ENDPOINT_STATUS=$(aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1 --query 'EndpointStatus' --output text)
-            if [ "$ENDPOINT_STATUS" = "Failed" ]; then
-                echo "Deleting failed endpoint..."
-                aws sagemaker delete-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1
-                echo "Recreating endpoint with new configuration..."
-                aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name $UNIQUE_CONFIG_NAME --region eu-north-1
-            else
-                echo "Updating SageMaker Endpoint with new configuration..."
-                aws sagemaker update-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name $UNIQUE_CONFIG_NAME --region eu-north-1
-            fi
-        else
-            echo "Creating SageMaker Endpoint..."
-            aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name $UNIQUE_CONFIG_NAME --region eu-north-1
+            echo "Deleting existing endpoint: gsom-cloud-endpoint..."
+            aws sagemaker delete-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1
         fi
+
+      - echo Creating a new SageMaker endpoint...
+      - aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name $UNIQUE_CONFIG_NAME --region eu-north-1
 
 artifacts:
   files:
