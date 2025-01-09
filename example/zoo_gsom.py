@@ -5,12 +5,15 @@ import boto3
 from gsom import GSOM  # Ensure the correct import
 
 # AWS S3 Configuration
-BUCKET_NAME = "gsom-input-bucket"
+INPUT_BUCKET_NAME = "gsom-input-bucket"
+OUTPUT_BUCKET_NAME = "gsom-output-bucket"
 FILE_KEY = "zoo.txt"
 
-# Define a cross-platform temporary local file path
+# Define paths
 LOCAL_FILE_PATH = os.path.join(os.getcwd(), "tmp", "zoo.txt")  # Local temp path
 OUTPUT_DIR = os.path.join(os.getcwd(), "output")              # Output directory
+PLOT_FILE_PATH = os.path.join(OUTPUT_DIR, "gsom_plot.pdf")     # Path to the PDF plot
+CSV_FILE_PATH = os.path.join(OUTPUT_DIR, "gsom.csv")           # Path to the CSV output
 
 # Ensure directories exist
 os.makedirs(os.path.dirname(LOCAL_FILE_PATH), exist_ok=True)
@@ -25,11 +28,24 @@ def download_from_s3():
     """
     s3 = boto3.client("s3")
     try:
-        print(f"Attempting to download from bucket: {BUCKET_NAME}, file key: {FILE_KEY}")
-        s3.download_file(BUCKET_NAME, FILE_KEY, LOCAL_FILE_PATH)
+        print(f"Attempting to download from bucket: {INPUT_BUCKET_NAME}, file key: {FILE_KEY}")
+        s3.download_file(INPUT_BUCKET_NAME, FILE_KEY, LOCAL_FILE_PATH)
         print(f"Downloaded {FILE_KEY} from S3 to {LOCAL_FILE_PATH}")
     except Exception as e:
         print(f"Error downloading file from S3: {e}")
+        raise
+
+def upload_to_s3(local_file_path, bucket_name, s3_key):
+    """
+    Uploads a file to S3.
+    """
+    s3_client = boto3.client('s3')
+    try:
+        print(f"Uploading {local_file_path} to s3://{bucket_name}/{s3_key}")
+        s3_client.upload_file(local_file_path, bucket_name, s3_key)
+        print(f"File successfully uploaded to s3://{bucket_name}/{s3_key}")
+    except Exception as e:
+        print(f"Error uploading file to S3: {e}")
         raise
 
 if __name__ == "__main__":
@@ -68,18 +84,22 @@ if __name__ == "__main__":
     # Step 5: Save outputs to the output directory
     try:
         # Save the GSOM plot
-        plot_path = os.path.join(OUTPUT_DIR, "gsom_plot.pdf")
-        print(f"Attempting to save GSOM plot to: {plot_path}")
+        print(f"Attempting to save GSOM plot to: {PLOT_FILE_PATH}")
         gsom_map.plot(map_points, "Name", output_dir=OUTPUT_DIR)  # Fixed call
-        if os.path.exists(plot_path):
-            print(f"GSOM plot successfully saved to: {plot_path}")
+        if os.path.exists(PLOT_FILE_PATH):
+            print(f"GSOM plot successfully saved to: {PLOT_FILE_PATH}")
         else:
-            print(f"Error: GSOM plot not found at: {plot_path}")
+            print(f"Error: GSOM plot not found at: {PLOT_FILE_PATH}")
 
         # Save the GSOM results as a CSV file
-        csv_output_path = os.path.join(OUTPUT_DIR, "gsom.csv")
-        map_points.to_csv(csv_output_path, index=False)
-        print(f"CSV file saved to: {csv_output_path}")
+        map_points.to_csv(CSV_FILE_PATH, index=False)
+        print(f"CSV file saved to: {CSV_FILE_PATH}")
+
+        # Upload outputs to S3
+        if os.path.exists(PLOT_FILE_PATH):
+            upload_to_s3(PLOT_FILE_PATH, OUTPUT_BUCKET_NAME, "output/gsom_plot.pdf")
+        if os.path.exists(CSV_FILE_PATH):
+            upload_to_s3(CSV_FILE_PATH, OUTPUT_BUCKET_NAME, "output/gsom.csv")
 
     except Exception as e:
         print(f"Error saving outputs: {e}")
