@@ -56,3 +56,12 @@ gsom.png
 # Docker files and cache (If you dont want docker builds on git)
 #Dockerfile
 .dockerignore
+
+#prediction
+download_prediction_result/
+gsom_plot.pdf
+
+#example
+example/
+tmp/
+zoo.txt
