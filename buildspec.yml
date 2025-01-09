@@ -8,6 +8,11 @@ phases:
         if aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1; then
             echo "Deleting existing endpoint: gsom-cloud-endpoint..."
             aws sagemaker delete-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1
+            echo "Waiting for endpoint deletion to complete..."
+            while aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1 2>/dev/null; do
+                echo "Endpoint is still being deleted. Waiting..."
+                sleep 10
+            done
         fi
 
       - echo Logging in to Amazon ECR...
@@ -36,4 +41,11 @@ phases:
       - echo Creating SageMaker endpoint configuration...
       - |
         aws sagemaker create-endpoint-config --endpoint-config-name gsom-endpoint-config \
-        --production-varian
+        --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" --region eu-north-1 || echo "Endpoint config already exists, continuing..."
+
+      - echo Creating a new SageMaker endpoint...
+      - aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1
+
+artifacts:
+  files:
+    - '**/*'
