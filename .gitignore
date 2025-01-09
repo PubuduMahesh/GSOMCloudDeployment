@@ -58,8 +58,7 @@ gsom.png
 .dockerignore
 
 #prediction
-download_prediction_result/
-gsom_plot.pdf
+download_prediction_result/gsom_plot.pdf
 
 #example
 example/
