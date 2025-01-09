@@ -18,4 +18,4 @@ RUN pip install .
 EXPOSE 8080
 
 # Set the default command to run the server
-CMD ["python", "gsom/serve.py"]
+ENTRYPOINT ["python", "gsom/serve.py"]
