@@ -1,18 +1,17 @@
-# Base image for Python
 FROM python:3.9-slim
 
-# Set working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy requirements file and install dependencies
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Set PYTHONPATH so Python can locate the 'gsom' module
-ENV PYTHONPATH=/app
-
-# Copy the rest of the application code into the container
+# Copy application code
 COPY . .
 
-# Set the default command to run the script
-CMD ["python", "example/zoo_gsom.py"]
+# Expose port for SageMaker
+EXPOSE 8080
+
+# Add a default entrypoint for SageMaker "serve" command
+ENTRYPOINT ["python", "gsom/serve.py"]
