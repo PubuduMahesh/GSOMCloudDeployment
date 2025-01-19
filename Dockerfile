@@ -1,17 +1,21 @@
+# Use a slim Python image
 FROM python:3.9-slim
 
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
-# Install dependencies
+# Copy the requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the application files
 COPY . .
 
-# Expose port for SageMaker
+# Install the `gsom` module
+RUN pip install .
+
+# Expose the Flask app's port
 EXPOSE 8080
 
-# Add a default entrypoint for SageMaker "serve" command
+# Set the default command to run the server
 ENTRYPOINT ["python", "gsom/serve.py"]
