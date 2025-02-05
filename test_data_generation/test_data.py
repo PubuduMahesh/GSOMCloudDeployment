@@ -15,7 +15,7 @@ def generate_test_data(file_size_mb, output_file):
 
     with open(temp_file, 'w') as f:
         # Write headers
-        f.write('Name ' + ' '.join([f'w{i}' for i in range(1, 16)]) + ' label\n')
+        f.write('Name,' + ','.join([f'w{i}' for i in range(1, 16)]) + ',label\n')
 
     current_size = os.path.getsize(temp_file)
     while current_size < target_size:
@@ -26,7 +26,8 @@ def generate_test_data(file_size_mb, output_file):
             name = random.choice(['aardvark', 'antelope', 'bass', 'bear', 'boar', 'buffalo'])
             weights = [random.randint(0, 4) for _ in range(15)]
             label = random.randint(0, 1)
-            row = f"{name} {' '.join(map(str, weights))} {label}\n"
+            # Format row with commas
+            row = f"{name}," + ','.join(map(str, weights)) + f",{label}\n"
             data.append(row)
 
         # Append to file
@@ -39,7 +40,7 @@ def generate_test_data(file_size_mb, output_file):
     print(f"File generated: {temp_file} with approximate size {file_size_mb} MB")
 
 # List of dataset sizes to generate
-data_file_sizes = [1, 5, 10, 15, 20, 25, 30, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
+data_file_sizes = [20]
 
 # Generate datasets for each size
 for size in data_file_sizes:
