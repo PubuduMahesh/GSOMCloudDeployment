@@ -35,7 +35,7 @@ phases:
             echo "Model gsom-cloud-model already exists. Skipping model creation."
         else
             echo "Creating SageMaker Model..."
-            aws sagemaker create-model --model-name gsom-cloud-model --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest --execution-role-arn arn:aws:iam::448049833640:role/service-role/AmazonSageMaker-ExecutionRole --region eu-north-1
+            aws sagemaker create-model --model-name gsom-cloud-model --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest --execution-role-arn arn:aws:iam::448049833640:role/AmazonSageMaker-ExecutionRole --region eu-north-1
         fi
 
       - echo Creating SageMaker endpoint configuration...
