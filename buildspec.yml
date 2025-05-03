@@ -1,4 +1,4 @@
-version: 0.2
+version: 0.3
 
 phases:
   pre_build:
@@ -13,6 +13,13 @@ phases:
                 echo "Endpoint is still being deleted. Waiting..."
                 sleep 10
             done
+        fi
+
+      - echo Ensuring ECR repository exists...
+      - |
+        if ! aws ecr describe-repositories --repository-names gsom-image --region eu-north-1; then
+            echo "ECR repository not found. Creating gsom-image repository..."
+            aws ecr create-repository --repository-name gsom-image --region eu-north-1
         fi
 
       - echo Logging in to Amazon ECR...
@@ -35,16 +42,25 @@ phases:
             echo "Model gsom-cloud-model already exists. Skipping model creation."
         else
             echo "Creating SageMaker Model..."
-            aws sagemaker create-model --model-name gsom-cloud-model --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest --execution-role-arn arn:aws:iam::448049833640:role/AmazonSageMaker-ExecutionRole --region eu-north-1
+            aws sagemaker create-model \
+              --model-name gsom-cloud-model \
+              --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest \
+              --execution-role-arn arn:aws:iam::448049833640:role/AmazonSageMaker-ExecutionRole \
+              --region eu-north-1
         fi
 
       - echo Creating SageMaker endpoint configuration...
       - |
-        aws sagemaker create-endpoint-config --endpoint-config-name gsom-endpoint-config \
-        --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" --region eu-north-1 || echo "Endpoint config already exists, continuing..."
+        aws sagemaker create-endpoint-config \
+          --endpoint-config-name gsom-endpoint-config \
+          --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" \
+          --region eu-north-1 || echo "Endpoint config already exists, continuing..."
 
       - echo Creating a new SageMaker endpoint...
-      - aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1
+      - aws sagemaker create-endpoint \
+          --endpoint-name gsom-cloud-endpoint \
+          --endpoint-config-name gsom-endpoint-config \
+          --region eu-north-1
 
 artifacts:
   files:
