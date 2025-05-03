@@ -1,16 +1,28 @@
 version: 0.2
 
 phases:
-  install:
-    runtime-versions:
-      python: 3.9
-    commands:
-      - echo Installing Docker and AWS CLI...
-      - apt-get update && apt-get install -y docker.io
-      - pip install --upgrade awscli
-
   pre_build:
     commands:
+      - echo Checking if SageMaker endpoint exists and deleting it if present...
+      - |
+        if aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1; then
+            echo "Deleting existing endpoint: gsom-cloud-endpoint..."
+            aws sagemaker delete-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1
+            echo "Waiting for endpoint deletion to complete..."
+            while aws sagemaker describe-endpoint --endpoint-name gsom-cloud-endpoint --region eu-north-1 2>/dev/null; do
+                echo "Endpoint is still being deleted. Waiting..."
+                sleep 10
+            done
+        fi
+        
+        - echo Ensuring ECR repository exists...
+        - |
+        if ! aws ecr describe-repositories --repository-names gsom-image --region eu-north-1; then
+            echo "ECR repository not found. Creating gsom-image repository..."
+            aws ecr create-repository --repository-name gsom-image --region eu-north-1
+        fi
+
+
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 448049833640.dkr.ecr.eu-north-1.amazonaws.com
 
@@ -31,26 +43,16 @@ phases:
             echo "Model gsom-cloud-model already exists. Skipping model creation."
         else
             echo "Creating SageMaker Model..."
-            aws sagemaker create-model \
-              --model-name gsom-cloud-model \
-              --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest \
-              --execution-role-arn arn:aws:iam::448049833640:role/AmazonSageMaker-ExecutionRole \
-              --region eu-north-1
+            aws sagemaker create-model --model-name gsom-cloud-model --primary-container Image=448049833640.dkr.ecr.eu-north-1.amazonaws.com/gsom-image:latest --execution-role-arn arn:aws:iam::448049833640:role/AmazonSageMaker-ExecutionRole --region eu-north-1
         fi
 
       - echo Creating SageMaker endpoint configuration...
       - |
-        aws sagemaker create-endpoint-config \
-          --endpoint-config-name gsom-endpoint-config \
-          --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" \
-          --region eu-north-1 || echo "Endpoint config already exists, continuing..."
+        aws sagemaker create-endpoint-config --endpoint-config-name gsom-endpoint-config \
+        --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" --region eu-north-1 || echo "Endpoint config already exists, continuing..."
 
       - echo Creating a new SageMaker endpoint...
-      - |
-        aws sagemaker create-endpoint \
-          --endpoint-name gsom-cloud-endpoint \
-          --endpoint-config-name gsom-endpoint-config \
-          --region eu-north-1 || echo "Endpoint already exists or failed to create."
+      - aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1
 
 artifacts:
   files:
