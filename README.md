@@ -75,4 +75,4 @@ If you use `pygsom`, please cite the following paper:
 }
 ```
 
-ci/cd1
+ci/cd12
