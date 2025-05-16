@@ -10,6 +10,16 @@ ENDPOINT_NAME = "gsom-cloud-endpoint"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    s3_client = boto3.client("s3", region_name=REGION)
+
+    # Fetch available buckets
+    try:
+        bucket_list = s3_client.list_buckets()["Buckets"]
+        buckets = [b["Name"] for b in bucket_list]
+    except Exception as e:
+        buckets = []
+        flash(f"❌ Error fetching S3 buckets: {str(e)}", "danger")
+
     if request.method == "POST":
         input_key = request.form.get("input_key")
         input_bucket = request.form.get("input_bucket")
@@ -40,7 +50,9 @@ def index():
         except Exception as e:
             flash(f"❌ Failed: {str(e)}", "danger")
 
-    return render_template("index.html")
+        return redirect(url_for("index"))
+
+    return render_template("index.html", buckets=buckets)
 
 if __name__ == "__main__":
     app.run(debug=True)

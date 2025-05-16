@@ -13,7 +13,7 @@
         label {
             font-weight: bold;
         }
-        input[type="text"] {
+        input, select {
             width: 400px;
             padding: 5px;
             margin-bottom: 10px;
@@ -30,18 +30,25 @@
 
     <form method="POST">
         <label>Input S3 Key:</label><br>
-        <input type="text" name="input_key"><br><br>
+        <input type="text" name="input_key" placeholder="e.g. zoo.txt"><br><br>
 
         <label>Input S3 Bucket:</label><br>
-        <input type="text" name="input_bucket"><br><br>
+        <select name="input_bucket">
+            {% for bucket in buckets %}
+                <option value="{{ bucket }}">{{ bucket }}</option>
+            {% endfor %}
+        </select><br><br>
 
         <label>Output S3 Bucket:</label><br>
-        <input type="text" name="output_bucket"><br><br>
+        <select name="output_bucket">
+            {% for bucket in buckets %}
+                <option value="{{ bucket }}">{{ bucket }}</option>
+            {% endfor %}
+        </select><br><br>
 
         <button type="submit">Run GSOM</button>
     </form>
 
-    <!-- JavaScript Alert for Flask Flash Messages -->
     <script>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
