@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+    <title>Invoke GSOM SageMaker Endpoint</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input, select {
+            width: 400px;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Invoke GSOM SageMaker Endpoint</h1>
+
+    <form method="POST">
+
+        <label>Input S3 File (Key):</label><br>
+        <select name="input_key">
+            {% for key in input_keys %}
+                <option value="{{ key }}">{{ key }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label>Input S3 Bucket:</label><br>
+        <select name="input_bucket">
+            {% for bucket in buckets %}
+                <option value="{{ bucket }}" {% if bucket == 'gsom-input-bucket' %}selected{% endif %}>{{ bucket }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label>Output S3 Bucket:</label><br>
+        <select name="output_bucket">
+            {% for bucket in buckets %}
+                <option value="{{ bucket }}" {% if bucket == 'gsom-output-bucket' %}selected{% endif %}>{{ bucket }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <button type="submit">Run GSOM</button>
+    </form>
+
+    <h3>Download Result</h3>
+    <form method="GET" action="/download">
+        <label>Select Output File:</label><br>
+        <select id="output_key" name="output_key">
+            {% for key in output_files %}
+                <option value="{{ key }}">{{ key }}</option>
+            {% endfor %}
+        </select><br><br>
+        <button type="submit">Download</button>
+    </form>
+
+    <script>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        alert("{{ message | replace('\\n', '\\\\n') }}");
+      {% endfor %}
+    {% endwith %}
+    </script>
+
+</body>
+</html>
