@@ -16,26 +16,20 @@ OUTPUT_BUCKET = "gsom-output-bucket"
 def index():
     s3_client = boto3.client("s3", region_name=REGION)
 
-    # Fetch buckets
     try:
-        bucket_list = s3_client.list_buckets()["Buckets"]
-        buckets = [b["Name"] for b in bucket_list]
+        buckets = [b["Name"] for b in s3_client.list_buckets()["Buckets"]]
     except Exception as e:
         buckets = []
         flash(f"❌ Error fetching S3 buckets: {str(e)}", "danger")
 
-    # Fetch input files
     try:
-        object_list = s3_client.list_objects_v2(Bucket=INPUT_BUCKET)
-        input_keys = [obj["Key"] for obj in object_list.get("Contents", [])]
+        input_keys = [obj["Key"] for obj in s3_client.list_objects_v2(Bucket=INPUT_BUCKET).get("Contents", [])]
     except Exception as e:
         input_keys = []
         flash(f"❌ Error fetching files from {INPUT_BUCKET}: {str(e)}", "danger")
 
-    # Fetch output files
     try:
-        output_list = s3_client.list_objects_v2(Bucket=OUTPUT_BUCKET)
-        output_files = [obj["Key"] for obj in output_list.get("Contents", [])]
+        output_files = [obj["Key"] for obj in s3_client.list_objects_v2(Bucket=OUTPUT_BUCKET).get("Contents", [])]
     except Exception as e:
         output_files = []
         flash(f"❌ Error fetching output files: {str(e)}", "danger")
@@ -45,18 +39,29 @@ def index():
         input_bucket = request.form.get("input_bucket")
         output_bucket = request.form.get("output_bucket")
 
-        if not input_key or not input_bucket or not output_bucket:
-            flash("❌ Please fill in all fields.", "danger")
-            return redirect(url_for("index"))
-
         try:
-            sm_runtime = boto3.client("sagemaker-runtime", region_name=REGION)
+            gsom_params = {
+                "spred_factor": float(request.form.get("spred_factor")),
+                "dimensions": int(request.form.get("dimensions")),
+                "distance": request.form.get("distance"),
+                "initialize": request.form.get("initialize"),
+                "learning_rate": float(request.form.get("learning_rate")),
+                "smooth_learning_factor": float(request.form.get("smooth_learning_factor")),
+                "max_radius": int(request.form.get("max_radius")),
+                "FD": float(request.form.get("FD")),
+                "r": float(request.form.get("r")),
+                "alpha": float(request.form.get("alpha")),
+                "initial_node_size": int(request.form.get("initial_node_size"))
+            }
+
             payload = {
                 "input_key": input_key,
                 "input_bucket": input_bucket,
-                "output_bucket": output_bucket
+                "output_bucket": output_bucket,
+                "gsom_params": gsom_params
             }
 
+            sm_runtime = boto3.client("sagemaker-runtime", region_name=REGION)
             response = sm_runtime.invoke_endpoint(
                 EndpointName=ENDPOINT_NAME,
                 Body=json.dumps(payload),
@@ -64,8 +69,7 @@ def index():
             )
 
             result = json.loads(response["Body"].read().decode("utf-8"))
-            message = result.get("result", "Execution completed.")
-            flash(f"✅ {message}", "success")
+            flash(f"✅ {result.get('result', 'Execution completed.')}", "success")
 
         except Exception as e:
             flash(f"❌ Failed: {str(e)}", "danger")
@@ -84,10 +88,6 @@ def download_file():
     try:
         s3_object = s3.get_object(Bucket=OUTPUT_BUCKET, Key=key)
         file_stream = BytesIO(s3_object["Body"].read())
-        return send_file(
-            file_stream,
-            as_attachment=True,
-            download_name=os.path.basename(key)
-        )
+        return send_file(file_stream, as_attachment=True, download_name=os.path.basename(key))
     except Exception as e:
         return f"Download failed: {e}", 500

@@ -2,43 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 import boto3
-from gsom import GSOM  # Ensure the correct import
-
-# AWS S3 Configuration
-INPUT_BUCKET_NAME = "gsom-input-bucket"
-OUTPUT_BUCKET_NAME = "gsom-output-bucket"
-FILE_KEY = "zoo.txt"
-
-# Define paths
-LOCAL_FILE_PATH = os.path.join(os.getcwd(), "tmp", "zoo.txt")  # Local temp path
-OUTPUT_DIR = os.path.join(os.getcwd(), "output")              # Output directory
-PLOT_FILE_PATH = os.path.join(OUTPUT_DIR, "gsom_plot.pdf")     # Path to the PDF plot
-CSV_FILE_PATH = os.path.join(OUTPUT_DIR, "gsom.csv")           # Path to the CSV output
-
-# Ensure directories exist
-os.makedirs(os.path.dirname(LOCAL_FILE_PATH), exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-print(f"Local file path for zoo.txt: {LOCAL_FILE_PATH}")
-print(f"Output directory: {OUTPUT_DIR}")
-
-def download_from_s3():
-    """
-    Download the zoo.txt file from the S3 bucket to a local path.
-    """
-    s3 = boto3.client("s3")
-    try:
-        print(f"Attempting to download from bucket: {INPUT_BUCKET_NAME}, file key: {FILE_KEY}")
-        s3.download_file(INPUT_BUCKET_NAME, FILE_KEY, LOCAL_FILE_PATH)
-        print(f"Downloaded {FILE_KEY} from S3 to {LOCAL_FILE_PATH}")
-    except Exception as e:
-        print(f"Error downloading file from S3: {e}")
-        raise
+import sys
+import json
+from gsom import GSOM
 
 def upload_to_s3(local_file_path, bucket_name, s3_key):
-    """
-    Uploads a file to S3.
-    """
     s3_client = boto3.client('s3')
     try:
         print(f"Uploading {local_file_path} to s3://{bucket_name}/{s3_key}")
@@ -51,58 +19,44 @@ def upload_to_s3(local_file_path, bucket_name, s3_key):
 if __name__ == "__main__":
     np.random.seed(1)
 
-    # Step 1: Download the file from S3
-    download_from_s3()
+    if len(sys.argv) < 2:
+        raise ValueError("Missing path to JSON input")
 
-    # Step 2: Read the dataset
-    try:
-        df = pd.read_csv(LOCAL_FILE_PATH)
-        print(f"Dataset loaded successfully. Shape: {df.shape}")
-    except Exception as e:
-        print(f"Error reading dataset: {e}")
-        raise
+    with open(sys.argv[1], "r") as f:
+        payload = json.load(f)
 
-    # Step 3: Train the GSOM map
-    try:
-        data_training = df.iloc[:, 1:17]
-        gsom_map = GSOM(.83, 16, max_radius=4)
-        gsom_map.fit(data_training.to_numpy(), 100, 50)
-        print("GSOM map training completed successfully.")
-    except Exception as e:
-        print(f"Error during GSOM training: {e}")
-        raise
+    input_bucket = payload["input_bucket"]
+    input_key = payload["input_key"]
+    output_bucket = payload["output_bucket"]
+    gsom_params = payload["gsom_params"]
 
-    # Step 4: Process the data and make predictions
-    try:
-        df = df.drop(columns=["label"])
-        map_points = gsom_map.predict(df, "Name")
-        print("Predictions completed successfully.")
-    except Exception as e:
-        print(f"Error during prediction: {e}")
-        raise
+    file_name = input_key.split("/")[-1]
+    local_path = f"/tmp/{file_name}"
+    output_dir = "/tmp"
+    output_csv = os.path.join(output_dir, "gsom.csv")
+    output_plot = os.path.join(output_dir, "gsom_plot.pdf")
 
-    # Step 5: Save outputs to the output directory
-    try:
-        # Save the GSOM plot
-        print(f"Attempting to save GSOM plot to: {PLOT_FILE_PATH}")
-        gsom_map.plot(map_points, "Name", output_dir=OUTPUT_DIR)  # Fixed call
-        if os.path.exists(PLOT_FILE_PATH):
-            print(f"GSOM plot successfully saved to: {PLOT_FILE_PATH}")
-        else:
-            print(f"Error: GSOM plot not found at: {PLOT_FILE_PATH}")
+    os.makedirs(output_dir, exist_ok=True)
 
-        # Save the GSOM results as a CSV file
-        map_points.to_csv(CSV_FILE_PATH, index=False)
-        print(f"CSV file saved to: {CSV_FILE_PATH}")
+    print(f"Downloading s3://{input_bucket}/{input_key} to {local_path}")
+    boto3.client("s3").download_file(input_bucket, input_key, local_path)
 
-        # Upload outputs to S3
-        if os.path.exists(PLOT_FILE_PATH):
-            upload_to_s3(PLOT_FILE_PATH, OUTPUT_BUCKET_NAME, "output/gsom_plot.pdf")
-        if os.path.exists(CSV_FILE_PATH):
-            upload_to_s3(CSV_FILE_PATH, OUTPUT_BUCKET_NAME, "output/gsom.csv")
+    df = pd.read_csv(local_path)
+    training_data = df.iloc[:, 1:gsom_params["dimensions"] + 1]
 
-    except Exception as e:
-        print(f"Error saving outputs: {e}")
-        raise
+    gsom = GSOM(**gsom_params)
+    gsom.fit(training_data.to_numpy(), training_iterations=100, smooth_iterations=50)
 
-    print("Complete")
+    df = df.drop(columns=["label"]) if "label" in df.columns else df
+    map_points = gsom.predict(df, "Name")
+
+    print(f"Saving plot to {output_plot}")
+    gsom.plot(map_points, "Name", output_dir=output_dir)
+
+    print(f"Saving CSV to {output_csv}")
+    map_points.to_csv(output_csv, index=False)
+
+    upload_to_s3(output_plot, output_bucket, "output/gsom_plot.pdf")
+    upload_to_s3(output_csv, output_bucket, "output/gsom.csv")
+
+    print("✅ GSOM execution completed and results uploaded.")

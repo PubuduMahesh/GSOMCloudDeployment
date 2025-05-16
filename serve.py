@@ -1,30 +1,32 @@
 from flask import Flask, request, jsonify
 import os
 import subprocess
+import json
 
 app = Flask(__name__)
 
 @app.route('/ping', methods=['GET'])
 def health_check():
-    # Health check endpoint for SageMaker
     return '', 200
 
 @app.route('/invocations', methods=['POST'])
 def predict():
-    # Trigger the zoo_gsom.py script
     try:
-        # Example prediction logic
         data = request.json
-        print(f"Received data: {data}")
+        print(f"Received data: {json.dumps(data, indent=2)}")
 
-        # Execute the zoo_gsom.py script
+        # Write JSON input to a temp file
+        input_path = "/tmp/payload.json"
+        with open(input_path, "w") as f:
+            json.dump(data, f)
+
+        # Execute the script with path to JSON as argument
         result = subprocess.run(
-            ["python", "example/zoo_gsom.py"],  # Adjust the path to zoo_gsom.py if needed
+            ["python", "example/zoo_gsom.py", input_path],
             capture_output=True,
             text=True
         )
 
-        # Log the output and errors from the script execution
         if result.returncode == 0:
             print(f"zoo_gsom.py executed successfully:\n{result.stdout}")
             return jsonify({"result": "Prediction successful", "log": result.stdout})
