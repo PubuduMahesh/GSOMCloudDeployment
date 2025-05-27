@@ -1,112 +1,138 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Invoke GSOM SageMaker Endpoint</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 40px;
-        }
-        h1 {
-            font-size: 24px;
-        }
-        label {
-            font-weight: bold;
-        }
-        input, select {
-            width: 400px;
-            padding: 5px;
-            margin-bottom: 10px;
-        }
-        button {
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>GSOM SageMaker UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-light">
 
-<h1>Invoke GSOM SageMaker Endpoint</h1>
+<div class="container py-5">
 
-<form method="POST">
+    <!-- Project Title Card -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header bg-primary text-white text-center">
+            <h3 class="mb-0">Scalable Cloud Driven Pipeline for Machine Learning Algorithms Deployment</h3>
+        </div>
+    </div>
 
-    <label>Input S3 File (Key):</label><br>
-    <select name="input_key">
-        {% for key in input_keys %}
-            <option value="{{ key }}">{{ key }}</option>
-        {% endfor %}
-    </select><br><br>
+    <!-- Upload File Section -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">Upload Dataset to S3 (gsom-input-bucket)</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/upload" enctype="multipart/form-data" class="row g-3">
+                <div class="col-md-9">
+                    <label class="form-label">Choose File</label>
+                    <input type="file" name="dataset_file" class="form-control" required>
+                </div>
+                <div class="col-md-3 d-grid align-items-end">
+                    <button type="submit" class="btn btn-outline-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <label>Input S3 Bucket:</label><br>
-    <select name="input_bucket">
-        {% for bucket in buckets %}
-            <option value="{{ bucket }}" {% if bucket == 'gsom-input-bucket' %}selected{% endif %}>{{ bucket }}</option>
-        {% endfor %}
-    </select><br><br>
+    <!-- Main Form Section -->
+    <div class="card shadow-lg">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Input S3 File (Key)</label>
+                    <select name="input_key" class="form-select">
+                        {% for key in input_keys %}
+                            <option value="{{ key }}">{{ key }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-    <label>Output S3 Bucket:</label><br>
-    <select name="output_bucket">
-        {% for bucket in buckets %}
-            <option value="{{ bucket }}" {% if bucket == 'gsom-output-bucket' %}selected{% endif %}>{{ bucket }}</option>
-        {% endfor %}
-    </select><br><br>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Input S3 Bucket</label>
+                        <select name="input_bucket" class="form-select">
+                            {% for bucket in buckets %}
+                                <option value="{{ bucket }}" {% if bucket == 'gsom-input-bucket' %}selected{% endif %}>{{ bucket }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Output S3 Bucket</label>
+                        <select name="output_bucket" class="form-select">
+                            {% for bucket in buckets %}
+                                <option value="{{ bucket }}" {% if bucket == 'gsom-output-bucket' %}selected{% endif %}>{{ bucket }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
 
-    <h3>GSOM Parameters</h3>
+                <h5 class="mt-4">GSOM Parameters</h5>
+                <div class="row">
+                    {% set fields = [
+                        ('spred_factor', 0.83),
+                        ('dimensions', 16),
+                        ('distance', 'euclidean'),
+                        ('initialize', 'random'),
+                        ('learning_rate', 0.3),
+                        ('smooth_learning_factor', 0.8),
+                        ('max_radius', 6),
+                        ('FD', 0.1),
+                        ('r', 3.8),
+                        ('alpha', 0.9),
+                        ('initial_node_size', 30000)
+                    ] %}
+                    {% for name, default in fields %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-capitalize">{{ name.replace('_', ' ') }}</label>
+                            <input type="{{ 'number' if name != 'distance' and name != 'initialize' else 'text' }}"
+                                   step="0.01" class="form-control" name="{{ name }}" value="{{ default }}">
+                        </div>
+                    {% endfor %}
+                </div>
 
-    <label>Spread Factor:</label><br>
-    <input type="number" name="spred_factor" step="0.01" value="0.83"><br>
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-success btn-lg">Run GSOM</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <label>Dimensions:</label><br>
-    <input type="number" name="dimensions" value="16"><br>
+    <!-- Download Results Section -->
+    <div class="card mt-5 shadow">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Download Results</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="/download" class="row g-3">
+                <div class="col-md-9">
+                    <label class="form-label">Select Output File</label>
+                    <select id="output_key" name="output_key" class="form-select">
+                        {% for key in output_files %}
+                            <option value="{{ key }}">{{ key }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-grid align-items-end">
+                    <button type="submit" class="btn btn-primary">Download</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-    <label>Distance:</label><br>
-    <input type="text" name="distance" value="euclidean"><br>
-
-    <label>Initialize:</label><br>
-    <input type="text" name="initialize" value="random"><br>
-
-    <label>Learning Rate:</label><br>
-    <input type="number" name="learning_rate" step="0.01" value="0.3"><br>
-
-    <label>Smooth Learning Factor:</label><br>
-    <input type="number" name="smooth_learning_factor" step="0.01" value="0.8"><br>
-
-    <label>Max Radius:</label><br>
-    <input type="number" name="max_radius" value="6"><br>
-
-    <label>FD:</label><br>
-    <input type="number" name="FD" step="0.01" value="0.1"><br>
-
-    <label>R:</label><br>
-    <input type="number" name="r" step="0.01" value="3.8"><br>
-
-    <label>Alpha:</label><br>
-    <input type="number" name="alpha" step="0.01" value="0.9"><br>
-
-    <label>Initial Node Size:</label><br>
-    <input type="number" name="initial_node_size" value="30000"><br><br>
-
-    <button type="submit">Run GSOM</button>
-</form>
-
-<h3>Download Result</h3>
-<form method="GET" action="/download">
-    <label>Select Output File:</label><br>
-    <select id="output_key" name="output_key">
-        {% for key in output_files %}
-            <option value="{{ key }}">{{ key }}</option>
-        {% endfor %}
-    </select><br><br>
-    <button type="submit">Download</button>
-</form>
-
-<script>
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for category, message in messages %}
-    alert("{{ message | replace('\n', '\\n') }}");
+    <script>
+        window.onload = function () {
+            const alertBox = document.createElement("div");
+            alertBox.className = "alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show position-fixed bottom-0 end-0 m-4";
+            alertBox.innerHTML = `{{ message }}` + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            document.body.appendChild(alertBox);
+        }
+    </script>
   {% endfor %}
 {% endwith %}
-</script>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
