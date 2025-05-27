@@ -8,12 +8,35 @@
 <body class="bg-light">
 
 <div class="container py-5">
-    <div class="card shadow-lg">
-        <div class="card-header bg-primary text-white">
+
+    <!-- Project Title Card -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header bg-primary text-white text-center">
             <h3 class="mb-0">Scalable Cloud Driven Pipeline for Machine Learning Algorithms Deployment</h3>
         </div>
-        <div class="card-body">
+    </div>
 
+    <!-- Upload File Section -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">Upload Dataset to S3 (gsom-input-bucket)</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/upload" enctype="multipart/form-data" class="row g-3">
+                <div class="col-md-9">
+                    <label class="form-label">Choose File</label>
+                    <input type="file" name="dataset_file" class="form-control" required>
+                </div>
+                <div class="col-md-3 d-grid align-items-end">
+                    <button type="submit" class="btn btn-outline-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Form Section -->
+    <div class="card shadow-lg">
+        <div class="card-body">
             <form method="POST">
                 <div class="mb-3">
                     <label class="form-label">Input S3 File (Key)</label>
@@ -74,6 +97,7 @@
         </div>
     </div>
 
+    <!-- Download Results Section -->
     <div class="card mt-5 shadow">
         <div class="card-header bg-dark text-white">
             <h5 class="mb-0">Download Results</h5>

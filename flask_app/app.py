@@ -3,6 +3,7 @@ import boto3
 import json
 import os
 from io import BytesIO
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "gsom_secret"
@@ -91,3 +92,20 @@ def download_file():
         return send_file(file_stream, as_attachment=True, download_name=os.path.basename(key))
     except Exception as e:
         return f"Download failed: {e}", 500
+
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    file = request.files.get("dataset_file")
+    if not file or file.filename == "":
+        flash("❌ No file selected for upload.", "danger")
+        return redirect(url_for("index"))
+
+    s3 = boto3.client("s3", region_name=REGION)
+    filename = secure_filename(file.filename)
+    try:
+        s3.upload_fileobj(file, INPUT_BUCKET, filename)
+        flash(f"✅ File '{filename}' uploaded successfully to S3.", "success")
+    except Exception as e:
+        flash(f"❌ Upload failed: {str(e)}", "danger")
+
+    return redirect(url_for("index"))
