@@ -49,7 +49,7 @@ phases:
       - echo Creating SageMaker endpoint configuration...
       - |
         aws sagemaker create-endpoint-config --endpoint-config-name gsom-endpoint-config \
-        --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.xlarge\", \"InitialInstanceCount\": 1}]" --region eu-north-1 || echo "Endpoint config already exists, continuing..."
+        --production-variants "[{\"VariantName\": \"gsom-variant-v1\", \"ModelName\": \"gsom-cloud-model\", \"InstanceType\": \"ml.c5.large\", \"InitialInstanceCount\": 1}]" --region eu-north-1 || echo "Endpoint config already exists, continuing..."
 
       - echo Creating a new SageMaker endpoint...
       - aws sagemaker create-endpoint --endpoint-name gsom-cloud-endpoint --endpoint-config-name gsom-endpoint-config --region eu-north-1
